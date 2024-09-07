@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
-	"version": "1.0.0",
-	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
-	"isDesktopOnly": false
+	"id": "expair",
+	"name": "Expair",
+	"version": "0.1.0",
+	"minAppVersion": "1.5.11",
+	"description": "Expand text with abbreviations using AI, useful for quick note-taking on Obsidian and expanding into full text later.",
+	"author": "Carlos Antelo",
+	"authorUrl": "https://github.com/anteloc/obsidian-expair-plugin",
+	"fundingUrl": "https://buymeacoffee.com/anteloc",
+	"isDesktopOnly": true
 }

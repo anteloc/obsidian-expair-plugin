@@ -1,8 +1,8 @@
 /*
-
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
+Expair CSS
 */
+
+.callout[data-callout="ai-pre-analysis"] {
+    --callout-color: 255, 142, 59;
+    --callout-icon: bot;
+}
