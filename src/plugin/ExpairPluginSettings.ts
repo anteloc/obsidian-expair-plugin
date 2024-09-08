@@ -1,13 +1,15 @@
 import { App, Modal, Notice, PluginSettingTab, Setting } from "obsidian";
 import ExpairPlugin from "./ExpairPlugin";
 import {
+    OPENAI_MODELS,
     DEFAULT_SYSTEM_PROMPT,
     DEFAULT_EXPAND_TEXT_PROMPT,
     DEFAULT_ABBREV_TEXT,
     DEFAULT_EXPANDED_TEXT,
     DEFAULT_GPT_MODEL,
     DEFAULT_MAX_WORDS,
-    OPENAI_MODELS,
+    DEFAULT_LANG,
+    SUPPORTED_LANGS,
 } from "src/ai/gpt/GptModels";
 import { v4 as  uuid } from "uuid";
 
@@ -23,6 +25,7 @@ type TuningExample = {
     exampleId: string;
     abbrevText: string;
     expandedText: string;
+    lang: string;
 };
 
 type OperationResult = {
@@ -35,6 +38,13 @@ export interface ExpairPluginSettings {
     tuningExamples: TuningExample[];
 }
 
+const defaultTuningExample = (): TuningExample => ({ 
+    exampleId: uuid(), 
+    abbrevText: DEFAULT_ABBREV_TEXT, 
+    expandedText: DEFAULT_EXPANDED_TEXT, 
+    lang: DEFAULT_LANG 
+});
+
 export const DEFAULT_SETTINGS: ExpairPluginSettings = {
     openai: {
         apiKey: "",
@@ -44,7 +54,9 @@ export const DEFAULT_SETTINGS: ExpairPluginSettings = {
         maxWords: DEFAULT_MAX_WORDS,
     },
     
-    tuningExamples: [{ exampleId: uuid(), abbrevText: DEFAULT_ABBREV_TEXT, expandedText: DEFAULT_EXPANDED_TEXT }],
+    tuningExamples: [
+        defaultTuningExample(),
+    ],
 };
 
 class AddTuningExampleModal extends Modal {
@@ -60,11 +72,7 @@ class AddTuningExampleModal extends Modal {
         // or create a new one with default values if none is provided
         this.editableExample = editableExample 
             ? { ...editableExample } 
-            : {
-                exampleId: uuid(),
-                abbrevText: DEFAULT_ABBREV_TEXT,
-                expandedText: DEFAULT_EXPANDED_TEXT,
-            };
+            : defaultTuningExample();
 
 
         this.modalEl.style.width = "auto";
@@ -72,9 +80,21 @@ class AddTuningExampleModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        const { abbrevText, expandedText } = this.editableExample;
+        const { abbrevText, expandedText, lang } = this.editableExample;
 
         contentEl.createEl("h1", { text: `${this.mode} tuning example` });
+
+        new Setting(contentEl).setName("Language").addDropdown((dropdown) => {
+            SUPPORTED_LANGS.forEach((lang) => dropdown.addOption(lang, lang));
+
+            dropdown
+                .setValue(lang)
+                .onChange((value: string) => {
+                    console.log('Selected language: ' + value);
+                    this.editableExample.lang = value;
+                })
+            }
+        );
 
         new Setting(contentEl).setName("Abbreviated text").addTextArea((text) => {
             const el = text.inputEl;

@@ -15,6 +15,7 @@ import {
 // import { ExpairPluginUtils } from "./ExpairPluginUtils";
 import { GptAbbrevExpander } from "../ai/gpt/GptAbbrevExpander";
 import { ExpandedTextRenderer } from "../renderer/ExpandedTextRenderer";
+import { makeCallout } from "./ExpairPluginUtils";
 
 type MarkdownCodeBlockHandler = (
     sourceCode: string,
@@ -36,62 +37,11 @@ export default class ExpairPlugin extends Plugin {
         //     this.app.workspace,
         // );
 
-        this.loadGraphApis();
+        // this.loadGraphApis();
 
         this.addSettingTab(new ExpairSettingTab(this.app, this));
 
-        const makeCallout = (
-            type: string,
-            state: "expanded" | "collapsed",
-            header: string,
-            text: string,
-        ) => {
-            const lines = [];
-    
-            const textLines = text.split("\n").map((line) => `> ${line}`);
-            const calloutState = state === "expanded" ? "+" : "-";
-    
-            lines.push(`> [!${type}]${calloutState} ${header} Original`);
-            lines.push(...textLines);
-    
-            return lines.join("\n");
-        }
-
-        this.addCommand({
-            id: "expand-with-ai",
-            name: "Expand abbreviations with AI",
-            editorCallback: (editor: Editor) => {
-                const selection = editor.getSelection();
-
-                if (!selection) {
-                    return;
-                }
-
-                const abbrevExpander = new GptAbbrevExpander(this.settings.openai, this.settings.tuningExamples);
-                const analyzingNotice = new Notice("Expanding text with AI...", 0);
-
-                abbrevExpander.analyze(selection)
-                    .then((expandedText) => {
-
-                    if (!expandedText) {
-                        new Notice("AI didn't return any results!");
-                        return;
-                    }
-
-                    const abbrevTextCallout = makeCallout("ai-pre-analysis", "collapsed", "AI", selection);
-                    const replacement = `${abbrevTextCallout}\n\n${expandedText ?? "No results!"}`;
-
-                    editor.replaceSelection(replacement);
-                    })
-                    .catch((error) => {
-                        console.error("expandAbbrevText: GPT Error:", error);
-                        new Notice(`Expanding text error!\n${error.message}`, 5);
-                    })
-                    .finally(() => {
-                        analyzingNotice.hide();
-                    });
-            },
-          });
+        this.addCommands();
 
         // Wait for layout ready to rerender active view to apply the new syntax highlighting
         const layoutReady = () =>
@@ -117,6 +67,112 @@ export default class ExpairPlugin extends Plugin {
     async saveSettings() {
         await this.saveData(this.settings);
     }
+
+    private addCommands() {
+
+        const { openai, tuningExamples } = this.settings;
+
+        const decorateWithCallout = (calloutText: string, text: string) => {
+            const callout = makeCallout("ai-pre-analysis", "collapsed", "AI", calloutText);
+            return `${callout}\n\n${text}`;
+        }
+
+        const expandInEditor = (editor: Editor, selection: string, expandedText: string | null) => {
+
+            if (!expandedText) {
+                new Notice("AI didn't return any results!");
+                return;
+            }
+
+            const replacement = decorateWithCallout(selection, expandedText);
+
+            editor.replaceSelection(replacement);
+        }
+
+        // Group examples by language
+        const examplesByLang = tuningExamples.reduce((acc, example) => {
+            const lang = example.lang;
+
+            acc[lang] = acc[lang] || [];
+            acc[lang].push(example);
+
+            return acc;
+        }, {} as Record<string, any[]>);
+
+
+        // const expanders = Object.values(examplesByLang).map((examples) => new GptAbbrevExpander(openai, tuningExamples));
+
+        // Returns a closure in order to create a command that will expand the selected text
+        // with the expander for the given language
+        const expanderEditorCallback = (expander: GptAbbrevExpander) => (editor: Editor) => {
+            const selection = editor.getSelection();
+
+            if (!selection) {
+                return;
+            }
+
+            const analyzingNotice = new Notice("Expanding text with AI...", 0);
+            
+            expander.analyze(selection)
+                .then((expandedText) => expandInEditor(editor, selection, expandedText))
+                .catch((error) => {
+                    console.error("expandAbbrevText: GPT Error:", error);
+                    new Notice(`Expanding text error!\n${error.message}`, 5);
+                })
+                .finally(() => {
+                    analyzingNotice.hide();
+                });
+        };
+
+        Object.entries(examplesByLang).forEach(([lang, langExamples]) => {
+            const abbrevExpander = new GptAbbrevExpander(openai, langExamples);
+
+            const cmd = this.addCommand({
+                id: `expand-with-ai-${lang}`,
+                name: `Expand abbreviations with AI (${lang})`,
+                editorCallback: expanderEditorCallback(abbrevExpander),
+            });
+
+            console.log(`Command for ${lang} added: ${cmd.name}`, cmd);
+        });
+
+        // this.addCommand({
+        //     id: "expand-with-ai",
+        //     name: "Expand abbreviations with AI",
+        //     editorCallback: (editor: Editor) => {
+        //         const selection = editor.getSelection();
+
+        //         if (!selection) {
+        //             return;
+        //         }
+
+        //         const abbrevExpander = new GptAbbrevExpander(this.settings.openai, this.settings.tuningExamples);
+        //         const analyzingNotice = new Notice("Expanding text with AI...", 0);
+        //         const expandInEditor = (expandedText: string | null) => {
+
+        //             if (!expandedText) {
+        //                 new Notice("AI didn't return any results!");
+        //                 return;
+        //             }
+
+        //             const replacement = decorateWithCallout(selection, expandedText);
+
+        //             editor.replaceSelection(replacement);
+        //         }
+
+        //         abbrevExpander.analyze(selection)
+        //             .then(expandInEditor)
+        //             .catch((error) => {
+        //                 console.error("expandAbbrevText: GPT Error:", error);
+        //                 new Notice(`Expanding text error!\n${error.message}`, 5);
+        //             })
+        //             .finally(() => {
+        //                 analyzingNotice.hide();
+        //             });
+        //     },
+        //   });
+    }
+
 
     private loadGraphApis() {
         const abbrevExpander = new GptAbbrevExpander(this.settings.openai, this.settings.tuningExamples);

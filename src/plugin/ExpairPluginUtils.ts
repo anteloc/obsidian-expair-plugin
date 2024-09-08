@@ -12,6 +12,23 @@ import * as crypto from 'crypto';
 
 export const md5 = (contents: string) => crypto.createHash('md5').update(contents).digest("hex");
 
+export const makeCallout = (
+    type: string,
+    state: "expanded" | "collapsed",
+    header: string,
+    text: string,
+) => {
+    const lines = [];
+
+    const textLines = text.split("\n").map((line) => `> ${line}`);
+    const calloutState = state === "expanded" ? "+" : "-";
+
+    lines.push(`> [!${type}]${calloutState} ${header} Original`);
+    lines.push(...textLines);
+
+    return lines.join("\n");
+}
+
 // FIXME remove dead and unused code
 export class ExpairPluginUtils {
     constructor(

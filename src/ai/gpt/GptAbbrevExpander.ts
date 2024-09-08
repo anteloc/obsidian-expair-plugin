@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 
 export class GptAbbrevExpander {
+    lang: string;
     constructor(
         private openaiSettings: {
             apiKey: string;
@@ -14,16 +15,20 @@ export class GptAbbrevExpander {
         private tuningExamples: {
             abbrevText: string;
             expandedText: string;
+            lang: string;
         }[]
-    ) {}
+    ) {
+        // XXX does it make sense to consider several languages?
+        // all examples are for the same language
+        this.lang = this.tuningExamples[0].lang;
+    }
 
     public async analyze(abbrevText: string): Promise<string | null> {
         const { apiKey, model } = this.openaiSettings;
 
+        // WARNING: Security risk, added here after a warning message from OpenAI API
         const openai = new OpenAI({
             apiKey,
-            // WARNING: This is a security risk, added here after a
-            // warning message from the OpenAI API.
             dangerouslyAllowBrowser: true,
         });
 
@@ -44,6 +49,8 @@ export class GptAbbrevExpander {
         const { model, expandTextPrompt, systemPrompt } =
             this.openaiSettings;
 
+        const expandPrompt = `In ${this.lang}: ${expandTextPrompt}`;
+
         const messages = [];
 
         messages.push({
@@ -54,7 +61,7 @@ export class GptAbbrevExpander {
         this.tuningExamples.forEach((example) => {
             messages.push({
                 role: "user",
-                content: `${expandTextPrompt}: "${example.abbrevText}"`,
+                content: `${expandPrompt}: "${example.abbrevText}"`,
             });
             messages.push({
                 role: "assistant",
@@ -64,7 +71,7 @@ export class GptAbbrevExpander {
 
         messages.push({
             role: "user",
-            content: `${expandTextPrompt}: "${abbrevText}"`,
+            content: `${expandPrompt}: "${abbrevText}"`,
         });
 
         const body = {
