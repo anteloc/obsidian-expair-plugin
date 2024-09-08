@@ -89,10 +89,7 @@ class AddTuningExampleModal extends Modal {
 
             dropdown
                 .setValue(lang)
-                .onChange((value: string) => {
-                    console.log('Selected language: ' + value);
-                    this.editableExample.lang = value;
-                })
+                .onChange((value: string) => this.editableExample.lang = value)
             }
         );
 
@@ -103,9 +100,7 @@ class AddTuningExampleModal extends Modal {
             el.cols = 80;
             el.style.resize = "none";
 
-            text.setValue(abbrevText).onChange((value) => {
-                this.editableExample.abbrevText = value;
-            });
+            text.setValue(abbrevText).onChange((value) => this.editableExample.abbrevText = value);
         });
 
         new Setting(contentEl).setName("Expanded text").addTextArea((text) => {
@@ -115,9 +110,7 @@ class AddTuningExampleModal extends Modal {
             el.cols = 80;
             el.style.resize = "none";
 
-            text.setValue(expandedText).onChange((value) => {
-                this.editableExample.expandedText = value;
-            });
+            text.setValue(expandedText).onChange((value) => this.editableExample.expandedText = value);
         });
 
         new Setting(contentEl)
@@ -139,9 +132,7 @@ class AddTuningExampleModal extends Modal {
                 btn
                     .setButtonText("Cancel")
                     .setCta()
-                    .onClick(() => {
-                        this.close();
-                    }),
+                    .onClick(() => this.close()),
             );
     }
 

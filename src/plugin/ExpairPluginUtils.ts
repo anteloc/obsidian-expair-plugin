@@ -29,7 +29,7 @@ export const makeCallout = (
     return lines.join("\n");
 }
 
-// FIXME remove dead and unused code
+// FIXME remove dead and unused code, maybe refactor general utils to utils/Utils.ts ?
 export class ExpairPluginUtils {
     constructor(
         private pluginSettings: ExpairPluginSettings,

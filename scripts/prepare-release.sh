@@ -1,5 +1,9 @@
 #!/bin/bash
 
+
+# TODO review this script maybe this should be modified or is not required anymore, 
+# have a look at how to create a release using the contents of versions.json
+
 root_dir="$(dirname $0)/.."
 
 function usage() {
@@ -29,6 +33,8 @@ function get_current_version() {
     echo $version
 }
 
+# TODO maybe this should be modified or is not required anymore, 
+# have a look at how to create a release using the contents of versions.json
 function increase_version() {
     local current_version=$1
     local new_version=$(echo $current_version | awk -F. -v OFS=. '{print $1 "." $2+1 ".0"}')
