@@ -1,96 +1,113 @@
-# Obsidian Sample Plugin
+# Expair
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+> [!WARNING]
+> This plugin is still at an **experimental** **Proof-of-Concept (POC)** stage.
+> Even though this plugin is stable enough to try and use, _performance_ 
+> and _usability_ are still **WIP**.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+This is an **Obsidian plugin** for TBD
 
-**Note:** The Obsidian API is still in early alpha and is subject to change at any time!
+## Features
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+TBD animated gifs?
 
-## First time developing plugins?
+- **Feature 1** TBD
+- **Feature 2** TBD
+- **Feature 3** TBD
+    
+> [!IMPORTANT]
+> **OpenAI Analysis** feature requires:
+> - An **OpenAI account** and **API Key**.
+> -  Access to **gpt-4 models** via **OpenAI's API**
 
-Quick starting guide for new plugin devs:
+## Try It!
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+TBD
 
-## Releasing new releases
+### Setup
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+1. [Install Expair](#How%20to%20Install)
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+#### Video
 
-## Adding your plugin to the community plugin list
+A short video showing:
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+- **Demo action 1** TBD
+- **Demo action 2** TBD
+- **Demo action 3** TBD
 
-## How to use
+TBD [![Expair - Expand abbreviated texts with Obsidian](docs/assets/images/demo-video-preview.png)](https://www.youtube.com/watch?v=changeme "Expair Demo Video")
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
 
-## Manually installing the plugin
+## How to Install
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+There are currently two supported methods for installing this plugin:
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+### Method 1 - BRAT (Recommended)
 
-## Funding URL
+**TBD No BRAT support yet!**
 
-You can include funding URLs where people who use your plugin can financially support it.
+1. Install **BRAT Plugin** from the **Community Plugins** in Obsidian
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+2. In **Obsidian's Settings**
+  1. **BRAT > Add Beta Plugin > Github repository for...** 
+  2. Set to: https://github.com/anteloc/obsidian-expair-plugin
+  3. Restart **Obsidian**
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
+![brat-step-01](docs/assets/images/brat-step-01.png)
+
+![brat-step-02](docs/assets/images/brat-step-02.png)
+
+
+### Method 2 - Manual install 
+
+- **Requirements**: 
+  - Node.js **v20.x**
+
+1. In **Obsidian**, create a new vault with name: `my-vault` 
+
+![my-vault-step-01](docs/assets/images/my-vault-step-01.png)
+
+![my-vault-step-02](docs/assets/images/my-vault-step-02.png)
+
+2. **If it doesn't exist**, create a new `plugins` folder under your vault's `.obsidian` folder. 
+  - On some systems, this `.obsidian` folder will be **hidden**.
+
+![my-vault-step-03](docs/assets/images/my-vault-step-03.png)
+
+3. Open a terminal and `cd` to the **plugins** folder for your vault:
+
+**MacOS and Linux**
+```shell
+cd path/to/Documents/Obsidian/my-vault/.obsidian/plugins
 ```
 
-If you have multiple URLs, you can also do:
-
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
+**Windows**
+```shell
+cd path\to\Documents\Obsidian\my-vault\.obsidian\plugins
 ```
 
-## API Documentation
+4. Clone and build **Expair's repository**:
+```shell
+git clone https://github.com/anteloc/obsidian-expair-plugin.git
+cd obsidian-expair-plugin
+git checkout expair-poc # TODO remove this after merging into main
+npm install
+```
 
-See https://github.com/obsidianmd/obsidian-api
+5. Open your `my-vault` in **Obsidian** and [Turn on community plugins](https://help.obsidian.md/Extending+Obsidian/Community+plugins#Browse+community+plugins) if required.
+
+6. In **Obsidian's Settings**, enable **Expair** if required and **restart Obsidian** afterwards:
+
+![my-vault-step-04](docs/assets/images/my-vault-step-04.png)
+
+
+## Support
+
+If you are currently enjoying this plugin, and maybe has saved you **time and effort** worth inviting me a coffee, consider **supporting** my work by **buying me one**!
+
+TBD Update projects at landing page
+[<img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="200">](https://www.buymeacoffee.com/anteloc)
+
+## Acknowledgements
+**TBD**

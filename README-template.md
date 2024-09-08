@@ -91,6 +91,7 @@ cd path\to\Documents\Obsidian\my-vault\.obsidian\plugins
 ```shell
 git clone https://github.com/anteloc/obsidian-expair-plugin.git
 cd obsidian-expair-plugin
+git checkout expair-poc # TODO remove this after merging into main
 npm install
 ```
 
