@@ -65,7 +65,7 @@ export default class ExpairPlugin extends Plugin {
     }
 
     private loadGraphApis() {
-        const abbrevExpander = new GptAbbrevExpander(this.settings.openai);
+        const abbrevExpander = new GptAbbrevExpander(this.settings.openai, this.settings.tuningExamples);
 
         this.registerMarkdownCodeBlockProcessor(
             'expair',

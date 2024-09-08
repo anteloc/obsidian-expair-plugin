@@ -11,6 +11,10 @@ export class GptAbbrevExpander {
             // FIXME adapt maxWords to throw error if the number of abbrevs is too high
             maxWords: number;
         },
+        private tuningExamples: {
+            abbrevText: string;
+            expandedText: string;
+        }[]
     ) {}
 
     public async analyze(abbrevText: string): Promise<string | null> {
@@ -23,7 +27,6 @@ export class GptAbbrevExpander {
             dangerouslyAllowBrowser: true,
         });
 
-        // Just one image for now
         const requestBody = await this.requestBody(abbrevText);
 
         console.log(`Ongoing ${model} request...`, requestBody);
@@ -41,35 +44,34 @@ export class GptAbbrevExpander {
         const { model, expandTextPrompt, systemPrompt } =
             this.openaiSettings;
 
-        const userContent = [];
+        const messages = [];
 
-        const userPrompt = {
-            type: "text",
-            text: `${expandTextPrompt} 
-            ${abbrevText}`,
-        };
+        messages.push({
+            role: "system",
+            content: systemPrompt,
+        });
 
-        // const userAbbrevText = {
-        //     type: "text",
-        //     text: abbrevText,
-        // };
+        this.tuningExamples.forEach((example) => {
+            messages.push({
+                role: "user",
+                content: `${expandTextPrompt}: "${example.abbrevText}"`,
+            });
+            messages.push({
+                role: "assistant",
+                content: example.expandedText,
+            });
+        });
 
-        userContent.push(userPrompt);
+        messages.push({
+            role: "user",
+            content: `${expandTextPrompt}: "${abbrevText}"`,
+        });
 
         const body = {
             model: model,
             n: 1,
             max_tokens: 1000,
-            messages: [
-                {
-                    role: "system",
-                    content: systemPrompt,
-                },
-                {
-                    role: "user",
-                    content: userContent,
-                },
-            ],
+            messages,
         };
 
         return body as ChatCompletionCreateParamsNonStreaming;

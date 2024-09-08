@@ -15,6 +15,11 @@ export const DEFAULT_SYSTEM_PROMPT = `You are an specialist in quick-note taking
 
 export const DEFAULT_EXPAND_TEXT_PROMPT = `Translate the following text to it's non-abbreviated form`;
 
+// Abbreviation text for: I'm a specialist in quick-note taking, using word abbreviations
+// is: I'm a spec in q-n taking, using w abbrevs
+export const DEFAULT_ABBREV_TEXT = `I'm a spec in q-n taking, using w abbrevs`;
+export const DEFAULT_EXPANDED_TEXT = `I'm a specialist in quick-note taking, using word abbreviations`;
+
 export const DEFAULT_GPT_MODEL = OPENAI_MODELS[0];
 export const DEFAULT_MAX_WORDS = 500;
 

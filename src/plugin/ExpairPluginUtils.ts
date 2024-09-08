@@ -8,7 +8,11 @@ import {
     Workspace,
 } from "obsidian";
 import { ExpairPluginSettings } from "./ExpairPluginSettings";
+import * as crypto from 'crypto';
 
+export const md5 = (contents: string) => crypto.createHash('md5').update(contents).digest("hex");
+
+// FIXME remove dead and unused code
 export class ExpairPluginUtils {
     constructor(
         private pluginSettings: ExpairPluginSettings,
