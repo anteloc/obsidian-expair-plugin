@@ -4,6 +4,7 @@ import {
     MarkdownRenderer,
     MarkdownPostProcessorContext,
     Notice,
+    Editor,
 } from "obsidian";
 
 import {
@@ -38,6 +39,59 @@ export default class ExpairPlugin extends Plugin {
         this.loadGraphApis();
 
         this.addSettingTab(new ExpairSettingTab(this.app, this));
+
+        const makeCallout = (
+            type: string,
+            state: "expanded" | "collapsed",
+            header: string,
+            text: string,
+        ) => {
+            const lines = [];
+    
+            const textLines = text.split("\n").map((line) => `> ${line}`);
+            const calloutState = state === "expanded" ? "+" : "-";
+    
+            lines.push(`> [!${type}]${calloutState} ${header} Original`);
+            lines.push(...textLines);
+    
+            return lines.join("\n");
+        }
+
+        this.addCommand({
+            id: "expand-with-ai",
+            name: "Expand abbreviations with AI",
+            editorCallback: (editor: Editor) => {
+                const selection = editor.getSelection();
+
+                if (!selection) {
+                    return;
+                }
+
+                const abbrevExpander = new GptAbbrevExpander(this.settings.openai, this.settings.tuningExamples);
+                const analyzingNotice = new Notice("Expanding text with AI...", 0);
+
+                abbrevExpander.analyze(selection)
+                    .then((expandedText) => {
+
+                    if (!expandedText) {
+                        new Notice("AI didn't return any results!");
+                        return;
+                    }
+
+                    const abbrevTextCallout = makeCallout("ai-pre-analysis", "collapsed", "AI", selection);
+                    const replacement = `${abbrevTextCallout}\n\n${expandedText ?? "No results!"}`;
+
+                    editor.replaceSelection(replacement);
+                    })
+                    .catch((error) => {
+                        console.error("expandAbbrevText: GPT Error:", error);
+                        new Notice(`Expanding text error!\n${error.message}`, 5);
+                    })
+                    .finally(() => {
+                        analyzingNotice.hide();
+                    });
+            },
+          });
 
         // Wait for layout ready to rerender active view to apply the new syntax highlighting
         const layoutReady = () =>
@@ -114,7 +168,7 @@ export default class ExpairPlugin extends Plugin {
 
             el.appendChild(wrapper);
 
-            const process = new ExpandedTextRenderer(
+            const textRenderer = new ExpandedTextRenderer(
                 expander,
                 (message, duration) => new Notice(message, duration),
                 this.markdownRenderer(ppc.sourcePath),
@@ -125,7 +179,7 @@ export default class ExpairPlugin extends Plugin {
                 },
             );
 
-            await process.expandAbbrevText(sourceCode);
+            await textRenderer.expandAbbrevText(sourceCode);
         };
     }
 
