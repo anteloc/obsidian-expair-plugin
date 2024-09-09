@@ -73,7 +73,11 @@ export default class ExpairPlugin extends Plugin {
                 return;
             }
 
-            const replacement = decorateWithCallout(selection, expandedText);
+            // TODO Add a callout with the original text by choice of the user, 
+            // e. g. in settings or a custom command, due to that callout markdown text 
+            // can break other block elements, e. g. lists when trying to replace just one item
+            // const replacement = decorateWithCallout(selection, expandedText);
+            const replacement = expandedText;
 
             editor.replaceSelection(replacement);
         }
