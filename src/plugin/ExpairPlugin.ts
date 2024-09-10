@@ -3,12 +3,20 @@ import {
     MarkdownView,
     Notice,
     Editor,
+    Command,
+    MarkdownFileInfo,
+    Modal,
+    App,
+    ButtonComponent,
 } from "obsidian";
 
 import {
     ExpairPluginSettings,
     ExpairSettingTab,
     DEFAULT_SETTINGS,
+    TuningExample,
+    OpenAISettingsValue,
+    GlobalSettingsValue,
 } from "./ExpairPluginSettings";
 // import { ExpairPluginUtils } from "./ExpairPluginUtils";
 import { GptAbbrevExpander } from "../ai/gpt/GptAbbrevExpander";
@@ -42,7 +50,8 @@ export default class ExpairPlugin extends Plugin {
     }
 
     onunload() {
-        // TODO Check if code block processors require unregistering
+        // TODO Check cases where unload is required
+        console.log("ExpairPlugin unloaded");
     }
 
     async loadSettings() {
@@ -54,55 +63,14 @@ export default class ExpairPlugin extends Plugin {
     }
 
     async saveSettings() {
+        this.addCommands();
         await this.saveData(this.settings);
     }
 
     private addCommands() {
-
-        const { openai, tuningExamples } = this.settings;
-
-        const decorateWithCallout = (calloutText: string, text: string) => {
-            const callout = makeCallout("ai-pre-analysis", "collapsed", "AI", calloutText);
-            return `${callout}\n\n${text}`;
-        }
-
-        const expandInEditor = (editor: Editor, selection: string, expandedText: string | null) => {
-
-            if (!expandedText) {
-                new Notice("AI didn't return any results!");
-                return;
-            }
-
-            // TODO Add a callout with the original text by choice of the user, 
-            // e. g. in settings or a custom command, due to that callout markdown text 
-            // can break other block elements, e. g. lists when trying to replace just one item
-            // const replacement = decorateWithCallout(selection, expandedText);
-            const replacement = expandedText;
-
-            editor.replaceSelection(replacement);
-        }
-
-        // Returns a closure in order to create a command that will expand the selected text
-        // with the expander for the given language
-        const expanderCallback = (expander: GptAbbrevExpander) => (editor: Editor) => {
-            const selection = editor.getSelection();
-
-            if (!selection) {
-                return;
-            }
-
-            const analyzingNotice = new Notice("Expanding text with AI...", 0);
-            
-            expander.analyze(selection)
-                .then((expandedText) => expandInEditor(editor, selection, expandedText))
-                .catch((error) => {
-                    console.error("expandAbbrevText: GPT Error:", error);
-                    new Notice(`Expanding text error!\n${error.message}`, 5);
-                })
-                .finally(() => {
-                    analyzingNotice.hide();
-                });
-        };
+        console.log("Adding commands");
+        
+        const { globalSettings, openai, tuningExamples } = this.settings;
 
         // Group examples by language
         const examplesByLang = tuningExamples.reduce((acc, example) => {
@@ -112,15 +80,119 @@ export default class ExpairPlugin extends Plugin {
             acc[lang].push(example);
 
             return acc;
-        }, {} as Record<string, any[]>);
+        }, {} as Record<string, TuningExample[]>);
 
         // Create one command per language with an expander for the examples for that language
         Object.entries(examplesByLang)
-            .map(([lang, langExamples]) => ({
-                id: `expand-with-ai-${lang}`,
-                name: `Expand abbreviations with AI (${lang})`,
-                editorCallback: expanderCallback(new GptAbbrevExpander(openai, langExamples)),
-            }))
+            .map(([lang, examples]) => new ExpandCommand(this.app, { lang, examples }, globalSettings, openai ))
             .forEach((args) => this.addCommand(args));
     }
 }
+
+class ExpandCommand implements Command {
+    id: string;
+    name: string;
+    expander: GptAbbrevExpander;
+    preserveOriginal: string;
+
+    constructor(private app: App, exampleSet: { lang: string, examples: TuningExample[] }, globalSettings: GlobalSettingsValue, openai: OpenAISettingsValue) {
+        const {lang, examples} = exampleSet;
+        const {systemPrompt, expandTextPrompt, preserveOriginal} = globalSettings;
+
+        console.log("command settings", globalSettings);
+
+        this.id = `expand-with-ai-${lang}`;
+        this.name = `Expand abbreviations with AI (${lang})`;
+        this.preserveOriginal = preserveOriginal;
+        this.expander = new GptAbbrevExpander( {systemPrompt, expandTextPrompt}, openai, examples);
+    }
+
+    public async editorCallback(editor: Editor, _ctx: MarkdownView | MarkdownFileInfo) {
+
+        const onSubmit = async (yesNo: boolean) => {
+            this.runAnalysis(editor, yesNo);
+        }
+
+        console.log("preserve original:", this.preserveOriginal);
+
+        switch(this.preserveOriginal) {
+            case "Always":
+                this.runAnalysis(editor, true);
+                break;
+            case "Never":
+                this.runAnalysis(editor, false);
+                break;
+            case "Ask":
+                this.preserveOriginalModal(onSubmit);
+                break;
+        }
+    }
+
+    private preserveOriginalModal(onSubmit: (yesNo: boolean) => Promise<void>) {
+        new YesNoModal(this.app, "Preserve original content?", onSubmit).open();
+    }
+
+    public async runAnalysis(editor: Editor, originalCallout: boolean) {
+
+        const decorateWithCallout = (calloutText: string, text: string) => {
+            const callout = makeCallout("ai-pre-analysis", "collapsed", "AI", calloutText);
+            return `${callout}\n\n${text}`;
+        }
+
+        const selection = editor.getSelection();
+
+        if (!selection) {
+            new Notice(`First, select some text to be expanded`, 5);
+            return;
+        }
+
+        const analyzingNotice = new Notice("Expanding text with AI...", 0);
+
+        try {
+            const expandedText = await this.expander.analyze(selection) || "No results from AI!";
+            const replacement = originalCallout 
+                ? decorateWithCallout(selection, expandedText)
+                : expandedText;
+
+            editor.replaceSelection(replacement);
+            
+        } catch (error) {
+            console.error("expandAbbrevText: GPT Error:", error);
+            new Notice(`Expanding text error!\n${error.message}`, 5);
+        } finally {
+            analyzingNotice.hide();
+        }
+    }
+} 
+
+class YesNoModal extends Modal {
+    constructor(app: App, private message: string, private onSubmit: (yesNo: boolean) => Promise<void>) {
+      super(app);
+
+      this.modalEl.style.width = "auto";
+      this.modalEl.style.alignContent = "center";
+    }
+  
+    onOpen() {
+        const { contentEl } = this;
+
+        contentEl.createEl("h1", { text: this.message });
+
+        const choice = (yesNo: boolean) => {
+            this.onSubmit(yesNo);
+            this.close();
+        }
+
+        new ButtonComponent(contentEl)
+            .setButtonText("Yes")
+            .setCta()
+            .onClick(() => choice(true));
+
+        new ButtonComponent(contentEl)
+            .setButtonText("No")
+            .setCta()
+            .onClick(() => choice(false));
+    }
+  
+    
+  }

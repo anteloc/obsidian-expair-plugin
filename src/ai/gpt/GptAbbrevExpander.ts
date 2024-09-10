@@ -4,13 +4,10 @@ import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 export class GptAbbrevExpander {
     lang: string;
     constructor(
+        private prompts: { systemPrompt: string, expandTextPrompt: string },
         private openaiSettings: {
             apiKey: string;
             model: string;
-            systemPrompt: string;
-            expandTextPrompt: string;
-            // FIXME adapt maxWords to throw error if the number of abbrevs is too high
-            maxWords: number;
         },
         private tuningExamples: {
             abbrevText: string;
@@ -32,7 +29,7 @@ export class GptAbbrevExpander {
             dangerouslyAllowBrowser: true,
         });
 
-        const requestBody = await this.requestBody(abbrevText);
+        const requestBody = this.requestBody(abbrevText);
 
         console.log(`Ongoing ${model} request...`, requestBody);
 
@@ -43,11 +40,11 @@ export class GptAbbrevExpander {
         return response.choices[0].message.content;
     }
 
-    private async requestBody(
+    private requestBody(
         abbrevText: string,
-    ): Promise<ChatCompletionCreateParamsNonStreaming> {
-        const { model, expandTextPrompt, systemPrompt } =
-            this.openaiSettings;
+    ): ChatCompletionCreateParamsNonStreaming {
+        const { model } = this.openaiSettings;
+        const { systemPrompt, expandTextPrompt } = this.prompts;
 
         const expandPrompt = `In ${this.lang}: ${expandTextPrompt}`;
 

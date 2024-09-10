@@ -2,26 +2,33 @@ import { App, Modal, Notice, PluginSettingTab, Setting } from "obsidian";
 import ExpairPlugin from "./ExpairPlugin";
 import {
     OPENAI_MODELS,
+    DEFAULT_GPT_MODEL,
+} from "src/ai/gpt/GptModels";
+import {
     DEFAULT_SYSTEM_PROMPT,
     DEFAULT_EXPAND_TEXT_PROMPT,
     DEFAULT_ABBREV_TEXT,
     DEFAULT_EXPANDED_TEXT,
-    DEFAULT_GPT_MODEL,
     DEFAULT_MAX_WORDS,
     DEFAULT_LANG,
     SUPPORTED_LANGS,
-} from "src/ai/gpt/GptModels";
+    DEFAULT_PRESERVE_ORIGINAL,
+} from "src/plugin/ExpairPluginDefaults";
 import { v4 as  uuid } from "uuid";
 
-type OpenAISettingsValue = {
-    apiKey: string;
-    model: string;
+export type GlobalSettingsValue = {
     systemPrompt: string;
     expandTextPrompt: string;
     maxWords: number;
+    preserveOriginal: "Always" | "Ask" | "Never";
 };
 
-type TuningExample = {
+export type OpenAISettingsValue = {
+    apiKey: string;
+    model: string;
+};
+
+export type TuningExample = {
     exampleId: string;
     abbrevText: string;
     expandedText: string;
@@ -34,6 +41,7 @@ type OperationResult = {
 };
 
 export interface ExpairPluginSettings {
+    globalSettings: GlobalSettingsValue;
     openai: OpenAISettingsValue;
     tuningExamples: TuningExample[];
 }
@@ -46,14 +54,16 @@ const defaultTuningExample = (): TuningExample => ({
 });
 
 export const DEFAULT_SETTINGS: ExpairPluginSettings = {
-    openai: {
-        apiKey: "",
-        model: DEFAULT_GPT_MODEL.model,
+    globalSettings: {
         systemPrompt: DEFAULT_SYSTEM_PROMPT,
         expandTextPrompt: DEFAULT_EXPAND_TEXT_PROMPT,
         maxWords: DEFAULT_MAX_WORDS,
+        preserveOriginal: DEFAULT_PRESERVE_ORIGINAL,
     },
-    
+    openai: {
+        apiKey: "",
+        model: DEFAULT_GPT_MODEL.model,
+    },
     tuningExamples: [
         defaultTuningExample(),
     ],
@@ -85,7 +95,7 @@ class AddTuningExampleModal extends Modal {
         contentEl.createEl("h1", { text: `${this.mode} tuning example` });
 
         new Setting(contentEl).setName("Language").addDropdown((dropdown) => {
-            SUPPORTED_LANGS.forEach((lang) => dropdown.addOption(lang, lang));
+            SUPPORTED_LANGS.forEach((suppLang) => dropdown.addOption(suppLang, suppLang));
 
             dropdown
                 .setValue(lang)
@@ -143,11 +153,9 @@ class AddTuningExampleModal extends Modal {
 }
 
 export class ExpairSettingTab extends PluginSettingTab {
-    plugin: ExpairPlugin;
 
-    constructor(app: App, plugin: ExpairPlugin) {
+    constructor(app: App, private plugin: ExpairPlugin) {
         super(app, plugin);
-        this.plugin = plugin;
     }
 
     display(): void {
@@ -155,8 +163,95 @@ export class ExpairSettingTab extends PluginSettingTab {
 
         containerEl.empty();
 
+        this.globalSettings(containerEl);
         this.openaiSettings(containerEl);
         this.tuningExamplesSettings(containerEl);
+    }
+
+    private globalSettings(containerEl: HTMLElement) {
+        const globalSettings = this.plugin.settings.globalSettings;
+
+        new Setting(containerEl)
+            .setName("System prompt")
+            .setDesc("GPT will assume the role described in this prompt")
+            .addTextArea((text) => {
+                const el = text.inputEl;
+
+                el.rows = 10;
+                el.cols = 50;
+                el.style.resize = "none";
+
+                text.setValue(globalSettings.systemPrompt).onChange(async (value) => {
+                    globalSettings.systemPrompt = value;
+                    await this.plugin.saveSettings();
+                });
+            })
+            .addButton((button) => {
+                button.setButtonText("Reset").onClick(async () => {
+                    globalSettings.systemPrompt = DEFAULT_SYSTEM_PROMPT;
+                    await this.plugin.saveSettings();
+                    this.display();
+                });
+            });
+
+        new Setting(containerEl)
+            .setName("Expand abbreviated text prompt")
+            .setDesc(
+                "GPT will expand the selected text according to the instructions in this prompt",
+            )
+            .addTextArea((text) => {
+                const el = text.inputEl;
+
+                el.rows = 10;
+                el.cols = 50;
+                el.style.resize = "none";
+
+                text.setValue(globalSettings.expandTextPrompt).onChange(
+                    async (value) => {
+                        globalSettings.expandTextPrompt = value;
+                        await this.plugin.saveSettings();
+                    },
+                );
+            })
+            .addButton((button) => {
+                button.setButtonText("Reset").onClick(async () => {
+                    globalSettings.expandTextPrompt = DEFAULT_EXPAND_TEXT_PROMPT;
+                    await this.plugin.saveSettings();
+                    this.display();
+                });
+            });
+
+        // FIXME maxWords now will be max number of abbreviations to expand
+        new Setting(containerEl)
+            .setName("Max words")
+            .setDesc("WIP Maximum number of words in GPT's response")
+            .addText((text) => {
+                text.setValue(globalSettings.maxWords.toString()).onChange(
+                    async (value) => {
+                        try {
+                            globalSettings.maxWords = parseInt(value);
+                            await this.plugin.saveSettings();
+                        } catch (error) {
+                            new Notice(`Invalid maxWords value: '${value}'`);
+                        }
+                    },
+                );
+            });
+
+        new Setting(containerEl)
+            .setName("Preserve original text")
+            .setDesc("Add a callout containing the replaced text")
+            .addDropdown((preserveSelector) => {
+                preserveSelector
+                    .addOption("Always", "Always")
+                    .addOption("Never", "Never")
+                    .addOption("Ask", "Ask")
+                    .setValue(globalSettings.preserveOriginal)
+                    .onChange(async (value: "Always" | "Never" | "Ask") => {
+                        globalSettings.preserveOriginal = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
     }
 
     private openaiSettings(containerEl: HTMLElement) {
@@ -190,73 +285,6 @@ export class ExpairSettingTab extends PluginSettingTab {
                     openai.model = model;
                     await this.plugin.saveSettings();
                 });
-            });
-
-        new Setting(containerEl)
-            .setName("System prompt")
-            .setDesc("GPT will assume the role described in this prompt")
-            .addTextArea((text) => {
-                const el = text.inputEl;
-
-                el.rows = 10;
-                el.cols = 50;
-                el.style.resize = "none";
-
-                text.setValue(openai.systemPrompt).onChange(async (value) => {
-                    openai.systemPrompt = value;
-                    await this.plugin.saveSettings();
-                });
-            })
-            .addButton((button) => {
-                button.setButtonText("Reset").onClick(async () => {
-                    openai.systemPrompt = DEFAULT_SYSTEM_PROMPT;
-                    await this.plugin.saveSettings();
-                    this.display();
-                });
-            });
-
-        new Setting(containerEl)
-            .setName("Expand abbreviated text prompt")
-            .setDesc(
-                "GPT will expand the selected text according to the instructions in this prompt",
-            )
-            .addTextArea((text) => {
-                const el = text.inputEl;
-
-                el.rows = 10;
-                el.cols = 50;
-                el.style.resize = "none";
-
-                text.setValue(openai.expandTextPrompt).onChange(
-                    async (value) => {
-                        openai.expandTextPrompt = value;
-                        await this.plugin.saveSettings();
-                    },
-                );
-            })
-            .addButton((button) => {
-                button.setButtonText("Reset").onClick(async () => {
-                    openai.expandTextPrompt = DEFAULT_EXPAND_TEXT_PROMPT;
-                    await this.plugin.saveSettings();
-                    this.display();
-                });
-            });
-
-        // FIXME maxWords now will be max number of abbreviations to expand
-        new Setting(containerEl)
-            .setName("Max words")
-            .setDesc("Maximum number of words in GPT's response")
-            .addText((text) => {
-                text.setValue(openai.maxWords.toString()).onChange(
-                    async (value) => {
-                        try {
-                            openai.maxWords = parseInt(value);
-                            await this.plugin.saveSettings();
-                        } catch (error) {
-                            new Notice(`Invalid maxWords value: '${value}'`);
-                        }
-                    },
-                );
             });
     }
 
