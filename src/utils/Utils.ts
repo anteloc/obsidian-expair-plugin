@@ -1,33 +1,33 @@
 export async function pngImgData(imgData: URL): Promise<URL> {
-    return new Promise((resolve, _reject) => {
-        const img = new Image();
-        const canvas = document.createElement("canvas");
+  return new Promise((resolve, _reject) => {
+    const img = new Image();
+    const canvas = document.createElement("canvas");
 
-        // Both hidden
-        img.style.display = canvas.style.display = "none";
+    // Both hidden
+    img.style.display = canvas.style.display = "none";
 
-        document.body.appendChild(canvas);
+    document.body.appendChild(canvas);
 
-        const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d");
 
-        img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
 
-            if(!ctx) return;
-            
-            ctx.drawImage(img, 0, 0);
-            
-            const pngUrl = canvas.toDataURL("image/png");
-            
-            document.body.removeChild(canvas);
+      if (!ctx) return;
 
-            resolve(new URL(pngUrl));
-        };
+      ctx.drawImage(img, 0, 0);
 
-        img.src = imgData.toString();
-    });
+      const pngUrl = canvas.toDataURL("image/png");
+
+      document.body.removeChild(canvas);
+
+      resolve(new URL(pngUrl));
+    };
+
+    img.src = imgData.toString();
+  });
 }
 
 export const blob2url = (str: string, mimeType: string) =>
-    URL.createObjectURL(new Blob([str], { type: mimeType }));
+  URL.createObjectURL(new Blob([str], { type: mimeType }));

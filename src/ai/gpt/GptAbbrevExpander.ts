@@ -2,82 +2,83 @@ import OpenAI from "openai";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 
 export class GptAbbrevExpander {
-    lang: string;
-    constructor(
-        private prompts: { systemPrompt: string, expandTextPrompt: string },
-        private openaiSettings: {
-            apiKey: string;
-            model: string;
-        },
-        private tuningExamples: {
-            abbrevText: string;
-            expandedText: string;
-            lang: string;
-        }[]
-    ) {
-        // XXX does it make sense to consider several languages?
-        // all examples are for the same language
-        this.lang = this.tuningExamples[0].lang;
-    }
+  lang: string;
 
-    public async analyze(abbrevText: string): Promise<string | null> {
-        const { apiKey, model } = this.openaiSettings;
+  constructor(
+    private prompts: { systemPrompt: string; expandTextPrompt: string },
+    private openaiSettings: {
+      apiKey: string;
+      model: string;
+    },
+    private tuningExamples: {
+      abbrevText: string;
+      expandedText: string;
+      lang: string;
+    }[],
+  ) {
+    // XXX does it make sense to consider several languages?
+    // all examples are for the same language
+    this.lang = this.tuningExamples[0].lang;
+  }
 
-        // WARNING: Security risk, added here after a warning message from OpenAI API
-        const openai = new OpenAI({
-            apiKey,
-            dangerouslyAllowBrowser: true,
-        });
+  public async analyze(abbrevText: string): Promise<string | null> {
+    const { apiKey, model } = this.openaiSettings;
 
-        const requestBody = this.requestBody(abbrevText);
+    // WARNING: Security risk, added here after a warning message from OpenAI API
+    const openai = new OpenAI({
+      apiKey,
+      dangerouslyAllowBrowser: true,
+    });
 
-        console.log(`Ongoing ${model} request...`, requestBody);
+    const requestBody = this.requestBody(abbrevText);
 
-        const response = await openai.chat.completions.create(requestBody);
+    console.log(`Ongoing ${model} request...`, requestBody);
 
-        console.log(`Response received for ${model} request`);
+    const response = await openai.chat.completions.create(requestBody);
 
-        return response.choices[0].message.content;
-    }
+    console.log(`Response received for ${model} request`);
 
-    private requestBody(
-        abbrevText: string,
-    ): ChatCompletionCreateParamsNonStreaming {
-        const { model } = this.openaiSettings;
-        const { systemPrompt, expandTextPrompt } = this.prompts;
+    return response.choices[0].message.content;
+  }
 
-        const expandPrompt = `In ${this.lang}: ${expandTextPrompt}`;
+  private requestBody(
+    abbrevText: string,
+  ): ChatCompletionCreateParamsNonStreaming {
+    const { model } = this.openaiSettings;
+    const { systemPrompt, expandTextPrompt } = this.prompts;
 
-        const messages = [];
+    const expandPrompt = `In ${this.lang}: ${expandTextPrompt}`;
 
-        messages.push({
-            role: "system",
-            content: systemPrompt,
-        });
+    const messages = [];
 
-        this.tuningExamples.forEach((example) => {
-            messages.push({
-                role: "user",
-                content: `${expandPrompt}: "${example.abbrevText}"`,
-            });
-            messages.push({
-                role: "assistant",
-                content: example.expandedText,
-            });
-        });
+    messages.push({
+      role: "system",
+      content: systemPrompt,
+    });
 
-        messages.push({
-            role: "user",
-            content: `${expandPrompt}: "${abbrevText}"`,
-        });
+    this.tuningExamples.forEach((example) => {
+      messages.push({
+        role: "user",
+        content: `${expandPrompt}: "${example.abbrevText}"`,
+      });
+      messages.push({
+        role: "assistant",
+        content: example.expandedText,
+      });
+    });
 
-        const body = {
-            model: model,
-            n: 1,
-            max_tokens: 1000,
-            messages,
-        };
+    messages.push({
+      role: "user",
+      content: `${expandPrompt}: "${abbrevText}"`,
+    });
 
-        return body as ChatCompletionCreateParamsNonStreaming;
-    }
+    const body = {
+      model: model,
+      n: 1,
+      max_tokens: 1000,
+      messages,
+    };
+
+    return body as ChatCompletionCreateParamsNonStreaming;
+  }
 }
